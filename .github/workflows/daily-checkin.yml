@@ -53,6 +53,8 @@ jobs:
           CHECKIN_NOTIFY_ON: ${{ github.event.inputs.notify_on || 'on_failure' }}
           CHECKIN_ATTEMPTS: "4"
           CHECKIN_TIMEOUT: "30"
+          CHECKIN_LOW_USD: ""          # 填数字（如 2）则余额低于 $2 的站标红
+          CHECKIN_USD_RATE: "7.2"      # 折算人民币展示用汇率
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}

@@ -26,7 +26,7 @@
 |---|---|
 | `flavor` | `auto`（默认）/ `apix` / `newapi`，探测不准时手动指定 |
 | `quota_per_unit` | 额度换算除数，New API 默认 `500000`（=1$） |
-| `token` + `uid` | 不想给密码时用「系统访问令牌」：站点控制台 → 个人设置 → 生成令牌，填 `"token": "…"`, `"uid": "123"` |
+| `token` + `uid` | 不想给密码时用「系统访问令牌」：站点控制台 → 个人设置 → 系统访问令牌，填 `"token": "…"`, `"uid": "123"`（开了人机验证的站也能查余额/是否已签到，只差最后手点签到） |
 | `skip` | `true` 时该站只保留在配置里不执行 |
 
 > `user` 对 New API 站点填**邮箱或用户名都行**（接口字段是 `username`）。
@@ -68,6 +68,15 @@ Actions 页面 → **Run workflow** 可以勾选「只查询不签到」、指�
 | `NOTIFY_WEBHOOK` | 通用 webhook，`POST {"text": "…"}` |
 
 策略由 `CHECKIN_NOTIFY_ON` 控制：`on_failure`（默认，有失败/有站需手动才推）/ `always` / `on_success`。
+
+## 四点五、看板参数
+
+| 环境变量 | 默认 | 作用 |
+|---|---|---|
+| `CHECKIN_LOW_USD` | 0（关） | 余额低于该美元值的站在表里标 🔴低余额（在 workflow 的 `env:` 里加一行即可启用） |
+| `CHECKIN_USD_RATE` | 7.2 | 折算人民币展示用汇率 |
+
+Summary 表按余额从高到低排序，并给出**合计余额**。
 
 ## 五、已知边界（重要）
 
