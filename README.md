@@ -1,102 +1,94 @@
-# Apix.chat 每日自动签到（GitHub Actions）
+# 中转站每日自动签到 + 余额巡检（GitHub Actions）
 
-每天自动登录 <https://apix.chat> 并领取 **每日签到奖励**（当前为 `trial_balance 0.5`，24 小时有效），
-全程无需浏览器、无需 Cookie，直接调用站点官方接口。
+给一堆 AI 中转站（API Relay）自动做两件事：**每日签到白嫖额度** + **余额巡检**。
+纯 HTTP 调用站点自己的接口，**不需要浏览器、不需要过验证码的站全自动**，跑在 GitHub Actions 上，每天两次（北京时间 08:10 / 20:10），互不干扰、可重复运行。
 
-## 工作原理
+- 已适配 **Apix 面板**（`apix.chat` 及同类站）：`/api/v1/auth/login` → `/api/v1/user/checkin`
+- 已适配 **New API 面板**（绝大多数公益中转站）：`/api/user/login` → `/api/user/self` → `/api/user/checkin`
+  - 自动兼容两种鉴权：`session cookie + New-Api-User` 头，或 `access_token` 走 `Authorization: Bearer`
+- 面板类型自动探测，不用手写；只有探测失败时才需要手动加 `"flavor": "apix"` 或 `"newapi"`
 
-| 步骤 | 接口 | 说明 |
-| --- | --- | --- |
-| 1. 登录 | `POST /api/v1/auth/login` | `{"email","password"}` → `access_token`（有效期 86400s） |
-| 2. 查状态 | `GET /api/v1/user/checkin` | 返回 `today_checked` / `today_date` / 奖励信息 |
-| 3. 签到 | `POST /api/v1/user/checkin` | `200` 成功；`409 CHECKIN_ALREADY_CLAIMED` = 今日已领，视为成功 |
+## 一、准备站点配置
 
-脚本只有标准库依赖，自带 4 次指数退避重试（401/403 不重试），并把结果写入 Actions 的 Job Summary。
+复制 `sites.example.json` 的内容，改成你自己的账号，形如：
 
-## 目录结构
-
-```
-apix-checkin-bot/
-├─ apix_checkin.py                    # 签到脚本（本地也能跑）
-├─ .github/workflows/
-│  ├─ daily-checkin.yml               # 每日定时签到
-│  └─ keep-alive.yml                  # 每半月空提交，防止 Actions 因仓库 60 天无活动被停用
-└─ README.md
+```json
+[
+  {"name": "芯算AI",   "base": "https://xinsuanai.com",          "user": "你@qq.com",        "pass": "密码"},
+  {"name": "小鲸AI",   "base": "https://open.xiaojingai.com",    "user": "另一个@gmail.com", "pass": "密码"},
+  {"name": "Apix",     "base": "https://apix.chat",              "user": "你@qq.com",        "pass": "密码", "flavor": "apix"}
+]
 ```
 
-## 部署步骤
+可选字段：
 
-1. 在 GitHub 新建仓库（**Private 即可**，Actions 私有仓库 Linux 分钟数免费 unlimited 到 2000/月，足够）。
-2. 把本目录内容推上去：
+| 字段 | 作用 |
+|---|---|
+| `flavor` | `auto`（默认）/ `apix` / `newapi`，探测不准时手动指定 |
+| `quota_per_unit` | 额度换算除数，New API 默认 `500000`（=1$） |
+| `token` + `uid` | 不想给密码时用「系统访问令牌」：站点控制台 → 个人设置 → 生成令牌，填 `"token": "…"`, `"uid": "123"` |
+| `skip` | `true` 时该站只保留在配置里不执行 |
 
-   ```bash
-   cd apix-checkin-bot
-   git init -b main
-   git add . && git commit -m "feat: apix daily check-in"
-   git remote add origin https://github.com/<你的用户名>/<仓库名>.git
-   git push -u origin main
-   ```
+> `user` 对 New API 站点填**邮箱或用户名都行**（接口字段是 `username`）。
 
-3. 配置 Secrets：仓库 **Settings → Secrets and variables → Actions → New repository secret**
+## 二、存进 GitHub Secrets
 
-   | 名称 | 值 | 必填 |
-   | --- | --- | --- |
-   | `APIX_EMAIL` | 登录邮箱 | ✅ |
-   | `APIX_PASSWORD` | 登录密码 | ✅ |
-   | `SERVERCHAN_KEY` / `PUSHPLUS_TOKEN` | Server酱³ token，失败时推送 | 可选 |
-   | `TG_BOT_TOKEN` + `TG_CHAT_ID` | Telegram 通知 | 可选 |
-   | `NOTIFY_WEBHOOK` | 通用 webhook，`POST {"text": "..."}` | 可选 |
-   | `APIX_REFRESH_TOKEN` | 只想用 token 不想放密码时填 | 可选 |
-
-4. 仓库 **Settings → Actions → General**：
-   - *Workflow permissions* 保持 `Read repository contents`（`keep-alive.yml` 单独声明了 `contents: write`）；
-   - 确认 **Allow all workflows and reusable workflows** 已开启。
-5. 到 **Actions** 页面，手动点一次 **Run workflow** 验证。日志里看到
-   `签到成功` 或 `今日已签到` 且 Job Summary 出现奖励表格，即部署完成。
-
-> 新注册的 GitHub 账号必须先验证邮箱，否则 Schedule 不会触发。
-
-## 定时策略
-
-```cron
-10 0,12 * * *   # UTC 00:10 / 12:10  →  北京时间 08:10 / 20:10
-```
-
-一天两次机会：第一次成功则第二次只会提示"已签到"（接口幂等）；第一次因为网络抖动失败，第二次还能补上。
-签到日期按**服务器时区 Asia/Shanghai** 计算，所以北京时间 00:00 之后任意时刻跑都算当天。
-
-## 本地手动跑一次
+仓库 → Settings → Secrets and variables → Actions → 新建 **`SITES_JSON`**，把整个 JSON 数组粘进去（压缩成一行也可以）。
 
 ```powershell
-# Windows PowerShell
-$env:APIX_EMAIL="你的邮箱"; $env:APIX_PASSWORD="你的密码"
-python .\apix_checkin.py
+# 或用 gh CLI
+gh secret set SITES_JSON --body (Get-Content sites.local.json -Raw)
 ```
 
-```bash
-# Linux / macOS
-APIX_EMAIL=你的邮箱 APIX_PASSWORD=你的密码 python3 apix_checkin.py
+只跑单站也可以用旧的两个 Secret：`APIX_EMAIL` / `APIX_PASSWORD`（脚本会自动回退到 apix.chat 单站模式）。
+
+## 三、手动验证一次
+
+```powershell
+# 本地试运行（只查询，不签到）；凭据文件放本地，已被 .gitignore 忽略
+python checkin.py --config sites.local.json --dry-run
+
+# 本地真签到
+python checkin.py --config sites.local.json
+
+# 只跑某一个站
+python checkin.py --config sites.local.json --site xinsuanai
 ```
 
-退出码：`0` 成功（含"今日已签到"）、`1` 失败、`2` 缺少配置。
+Actions 页面 → **Run workflow** 可以勾选「只查询不签到」、指定站点、指定通知策略。
+每次运行结束后，Run 页面的 **Summary** 里有一张表：每个站的签到结果、余额、签到区间、累计奖励。
 
-## 可调参数（环境变量 / Workflow env）
+## 四、通知（可选，全部不填也能用）
 
-| 变量 | 默认 | 作用 |
-| --- | --- | --- |
-| `APIX_BASE_URL` | `https://apix.chat` | 换域名 / 镜像站 |
-| `APIX_ATTEMPTS` | `4` | 每步重试次数 |
-| `APIX_BACKOFF` | `5` | 退避基数秒（5 → 10 → 20 → 40） |
-| `APIX_TIMEOUT` | `30` | 单请求超时 |
-| `APIX_NOTIFY_ON` | `on_failure` | `always` / `on_failure` / `on_success` |
-| `APIX_USER_AGENT` | Chrome UA | 站点风控若变严可换 |
+| Secret | 说明 |
+|---|---|
+| `PUSHPLUS_TOKEN` | 微信 PushPlus 推送 |
+| `SERVERCHAN_KEY` | Server酱³ |
+| `TG_BOT_TOKEN` + `TG_CHAT_ID` | Telegram Bot |
+| `NOTIFY_WEBHOOK` | 通用 webhook，`POST {"text": "…"}` |
 
-## 常见问题
+策略由 `CHECKIN_NOTIFY_ON` 控制：`on_failure`（默认，有失败/有站需手动才推）/ `always` / `on_success`。
 
-- **401 / 登录失败**：密码被改，或站点启用了人机验证（`/api/v1/settings/public` 里的
-  `turnstile_enabled`、`tencent_captcha_enabled`）。目前这两项均为 `false`，纯账号密码即可；
-  若以后开启，需要在 `obtain_token()` 中补上验证码字段。
-- **409 CHECKIN_ALREADY_CLAIMED**：正常情况，脚本按成功处理。
-- **想停掉**：GitHub 仓库 Actions 页面 → 左侧 *Workflows* → **Disable workflows**。
-- **安全性**：密码放在 GitHub Secrets 里（仓库加密存储，只有本工作流可读），不会出现在代码或日志中；
-  脚本从不打印 token。建议定期轮换 apix 密码。
+## 五、已知边界（重要）
+
+1. **开了 Cloudflare 人机验证（Turnstile）的站不能自动签到。** 这类站的路由是
+   `selfRoute.POST("/checkin", middleware.TurnstileCheck(), controller.DoCheckin)`，
+   没有 `turnstile` token 直接返回 `Turnstile token 为空`，登录接口同理。
+   脚本会把它们标成 ⚠️ **需手动签到**，不再当成报错（例如 `api.uiuihao.com`）。
+   想半自动：在该站生成「系统访问令牌」填 `token`/`uid`，脚本就能查余额和是否已签到，只差最后点一下。
+2. **签到额度会过期。** Apix 的试用金 24 小时有效、New API 的赠送额度多为长期，具体看站。
+3. **公益站随时可能改规则、限流或跑路。** 建议只白嫖不充值；要充值也别大额，敏感数据别过第三方中转。
+4. 同一天重复运行安全：已签到会返回 `今日已签到` / `409`，脚本识别为成功。
+5. 仓库 60 天无活动 GitHub 会停用 schedule，`keep-alive.yml` 每半月自动空提交保活。
+6. 新注册 GitHub 账号需**验证邮箱**才会执行定时任务。
+
+## 文件
+
+| 文件 | 说明 |
+|---|---|
+| `checkin.py` | 主脚本：多站点、双面板、签到 + 余额 + 通知 + Summary |
+| `sites.example.json` | 配置模板（不含真实凭据） |
+| `run-local.ps1` | 本地交互式跑一次 |
+| `.github/workflows/daily-checkin.yml` | 每日定时（08:10 / 20:10 北京时间） |
+| `.github/workflows/keep-alive.yml` | 保活空提交，防止 schedule 被停用 |
+| `apix_checkin.py` | 旧版单站脚本，保留备查，已由 `checkin.py` 取代 |

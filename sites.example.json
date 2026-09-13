@@ -1,0 +1,40 @@
+﻿[
+  {
+    "name": "芯算AI",
+    "base": "https://xinsuanai.com",
+    "user": "邮箱或用户名",
+    "pass": "密码"
+  },
+  {
+    "name": "小鲸AI开放平台",
+    "base": "https://open.xiaojingai.com",
+    "user": "注册用的邮箱",
+    "pass": "密码"
+  },
+  {
+    "name": "LinkAPI",
+    "base": "https://linkapi.ai",
+    "user": "邮箱",
+    "pass": "密码"
+  },
+  {
+    "name": "Apix",
+    "base": "https://apix.chat",
+    "user": "邮箱",
+    "pass": "密码",
+    "flavor": "apix"
+  },
+  {
+    "name": "UiUiAPI聚合平台（示例：开了人机验证，只能查余额/提醒手动）",
+    "base": "https://api.uiuihao.com",
+    "user": "用户名",
+    "pass": "密码"
+  },
+  {
+    "name": "不想跑的站",
+    "base": "https://example.com",
+    "user": "",
+    "pass": "",
+    "skip": true
+  }
+]
