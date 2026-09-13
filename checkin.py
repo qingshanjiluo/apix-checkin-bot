@@ -78,6 +78,15 @@ def money(quota, per_unit=500000):
     return f"${usd:.4f} (≈¥{usd * USD_RATE:.3f})"
 
 
+def usd(v):
+    """Apix 面板的金额字段本身就是美元，不做除法。"""
+    try:
+        d = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    return f"${d:.4f} (≈¥{d * USD_RATE:.3f})"
+
+
 # --------------------------------------------------------------------------- client
 class Client:
     """带 cookie jar 的极简 JSON 客户端，自动处理两种面板的鉴权头。"""
@@ -190,10 +199,10 @@ def apix_run(c: Client, cfg: dict) -> dict:
         try:
             parts = []
             if float(b or 0):
-                parts.append(f"余额 {money(b)}")
+                parts.append(f"余额 {usd(b)}")
             if float(t or 0):
-                parts.append(f"试用金 {money(t)}")
-            return " + ".join(parts) or f"$0.0000（{first(dd, 'trial_validity_hours', default=24)}h 过期，用完即归零）"
+                parts.append(f"试用金 {usd(t)}")
+            return " + ".join(parts) or f"$0.0000（试用金 {first(dd, 'trial_validity_hours', default=24)}h 过期，用完归零）"
         except (TypeError, ValueError):
             return str(b)
 
@@ -208,7 +217,7 @@ def apix_run(c: Client, cfg: dict) -> dict:
 
     skipped = bool(sd.get("today_checked") or sd.get("checked_in_today"))
     reward = first(sd, "reward_amount", "quota_awarded", "amount")
-    res["range"] = f"每次 {money(reward)}（{first(sd, 'trial_validity_hours', default='?')}h 内有效）"
+    res["range"] = f"每次 {usd(reward)}（{first(sd, 'trial_validity_hours', default='?')}h 内有效）"
     res["extra"] = {"累计签到": first(sd, "total_checkins", "checkin_count", default=None),
                     "上次签到": first(sd, "last_checkin_at", default=None)}
     if DRY_RUN:
@@ -231,7 +240,7 @@ def apix_run(c: Client, cfg: dict) -> dict:
         res["checkin"] = "今日已签到（409）"
     else:
         r2 = first(got, "reward_amount", "quota_awarded", "amount", default=reward)
-        res["checkin"] = f"签到成功 +{money(r2)}" if r2 else "签到成功"
+        res["checkin"] = f"签到成功 +{usd(r2)}" if r2 else "签到成功"
     st, prof2 = c.call("GET", "/api/v1/user/profile")
     if isinstance(prof2, dict) and prof2.get("data"):
         res["balance"] = bal(prof2["data"])
@@ -355,7 +364,7 @@ def run_site(cfg: dict) -> dict:
     name = cfg.get("name") or cfg["base"]
     out = {"name": name, "base": cfg["base"], "ok": False, "checkin": "-", "balance": "-"}
     if cfg.get("skip"):
-        out.update(ok=True, checkin="已按配置跳过")
+        out.update(ok=True, flavor="已跳过", checkin="按配置跳过（skip=true）", balance="—")
         return out
     t0 = time.time()
     try:
