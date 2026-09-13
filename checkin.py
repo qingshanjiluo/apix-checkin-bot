@@ -63,6 +63,7 @@ TIMEOUT = int(os.environ.get("CHECKIN_TIMEOUT", "30"))
 BACKOFF = max(1, int(os.environ.get("CHECKIN_BACKOFF", "5")))
 DRY_RUN = os.environ.get("CHECKIN_DRY_RUN", "").lower() in ("1", "true", "yes")
 USD_RATE = float(os.environ.get("CHECKIN_USD_RATE", "7.2"))   # 余额折算人民币展示用
+LOW_USD = float(os.environ.get("CHECKIN_LOW_USD", "0") or 0)  # 低于该美元值标红
 
 
 def log(msg: str) -> None:
@@ -208,6 +209,10 @@ def apix_run(c: Client, cfg: dict) -> dict:
 
     res = {"flavor": "apix", "user": first(pd, "username", "email", default=user)}
     res["balance"] = bal(pd)
+    try:
+        res["usd"] = round(float(pd.get("balance") or 0) + float(pd.get("trial_balance") or 0), 6)
+    except (TypeError, ValueError):
+        res["usd"] = None
 
     st, stat = c.call("GET", "/api/v1/user/checkin")
     sd = stat.get("data", {}) if isinstance(stat, dict) else {}
@@ -314,11 +319,18 @@ def newapi_run(c: Client, cfg: dict) -> dict:
 
     stats = data.get("stats", {}) or {}
     skipped = bool(stats.get("checked_in_today"))
+    res["usd"] = round(float(me.get("quota", 0) or 0) / (per_unit or 500000), 6)
     res["range"] = (f"每次 {money(data.get('min_quota'), per_unit)}~{money(data.get('max_quota'), per_unit)}"
                     if data.get("min_quota") is not None else "")
     res["extra"].update({"签到次数": stats.get("checkin_count", stats.get("total_checkins")),
                          "累计奖励": money(stats.get("total_quota"), per_unit)
                          if stats.get("total_quota") is not None else None})
+    elig = data.get("eligibility") or {}
+    if elig.get("eligible") is False:
+        reason = elig.get("reason") or elig.get("message") or json.dumps(elig, ensure_ascii=False)[:120]
+        res["manual"] = True
+        res["checkin"] = f"暂不可签到（需先满足条件：{reason}）"
+        return res
     if DRY_RUN:
         res["checkin"] = "（试运行）今日" + ("已签到" if skipped else "未签到")
         return res
@@ -421,15 +433,30 @@ def load_sites(args) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- 通知 / 汇总
+def total_usd(rows):
+    vals = [r["usd"] for r in rows if isinstance(r.get("usd"), (int, float))]
+    return round(sum(vals), 4) if vals else None
+
+
+def low_flag(r):
+    thr = LOW_USD
+    if not thr or not isinstance(r.get("usd"), (int, float)) or r.get("manual"):
+        return ""
+    return "🔴低余额" if r["usd"] < thr else ""
+
+
 def build_report(rows: list[dict]) -> str:
     ok = sum(1 for r in rows if r["ok"])
     man = sum(1 for r in rows if r.get("manual"))
+    tot = total_usd(rows)
     lines = [f"【中转站签到】{time.strftime('%Y-%m-%d %H:%M')} UTC",
              f"成功 {ok}/{len(rows)}" + (f"，其中 {man} 家需手动" if man else "")
+             + (f"｜合计余额 ${tot}" if tot is not None else "")
              + ("（试运行）" if DRY_RUN else ""), ""]
-    for r in rows:
+    for r in sorted(rows, key=lambda x: -(x["usd"] if isinstance(x.get("usd"), (int, float)) else -1)):
         mark = "⚠️" if r.get("manual") else ("✅" if r["ok"] else "❌")
-        head = f"{mark} {r['name']} · {r.get('flavor', '?')}"
+        low = low_flag(r)
+        head = f"{mark} {r['name']} · {r.get('flavor', '?')}" + (f" {low}" if low else "")
         body = f"{head}\n   签到：{r['checkin']}"
         if r.get("balance"):
             body += f"\n   余额：{r['balance']}"
@@ -453,16 +480,22 @@ def write_summary(rows: list[dict]) -> None:
     ok = sum(1 for r in rows if r["ok"] and not r.get("manual"))
     man = sum(1 for r in rows if r.get("manual"))
     bad = sum(1 for r in rows if not r["ok"])
-    md = ["## 🎯 中转站每日签到 + 余额巡检", "",
-          f"**{time.strftime('%Y-%m-%d %H:%M')} UTC** ｜ 自动成功 {ok} ｜ 需手动 {man} ｜ 失败 {bad}", "",
+    tot = total_usd(rows)
+    md = ["## 🎯 中转站每日签到 + 余额看板", "",
+          f"**{time.strftime('%Y-%m-%d %H:%M')} UTC** ｜ 自动成功 **{ok}** ｜ 需手动 {man} ｜ 失败 {bad}"
+          + (f" ｜ 合计余额 **${tot}**（≈¥{tot * USD_RATE:.2f}）" if tot is not None else ""), "",
           "| 站点 | 面板 | 签到结果 | 余额 | 备注 |", "|---|---|---|---|---|"]
-    for r in rows:
+    for r in sorted(rows, key=lambda x: -(x["usd"] if isinstance(x.get("usd"), (int, float)) else -1)):
         ex = "，".join(f"{k} {v}" for k, v in (r.get("extra") or {}).items() if v not in (None, ""))
         if r.get("range"):
             ex = (r["range"] + ("，" + ex if ex else ""))
         icon = "⚠️" if r.get("manual") else ("✅" if r["ok"] else "❌")
+        low = low_flag(r)
+        bal = r.get("balance", "-") + (f" {low}" if low else "")
         md.append(f"| {icon} **{r['name']}**<br><sub>{r['base'].split('://')[-1]}</sub> "
-                  f"| {r.get('flavor', '-')} | {r['checkin']} | {r.get('balance', '-')} | {ex} |")
+                  f"| {r.get('flavor', '-')} | {r['checkin']} | {bal} | {ex} |")
+    if LOW_USD:
+        md += ["", f"<sub>🔴 = 余额低于设定阈值 ${LOW_USD}（Secret/环境变量 `CHECKIN_LOW_USD`）</sub>"]
     md += ["", f"<sub>试运行：{DRY_RUN}｜生成时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC</sub>"]
     try:
         with open(path, "a", encoding="utf-8") as fh:
