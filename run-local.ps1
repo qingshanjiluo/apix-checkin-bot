@@ -3,12 +3,14 @@
 #       .\run-local.ps1 -Email a@b.com   # 指定邮箱
 #       .\run-local.ps1 -NotifyOn always # 强制推送通知
 param(
-    [string]$Email = "sifangzhiji@qq.com",
+    [string]$Email = "",
     [string]$BaseUrl = "https://apix.chat",
     [ValidateSet("always", "on_failure", "on_success")]
     [string]$NotifyOn = "on_failure",
     [SecureString]$PasswordSecure
 )
+
+if (-not $Email) { $Email = Read-Host "apix.chat 登录邮箱" }
 
 if ($PasswordSecure) {
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($PasswordSecure)
