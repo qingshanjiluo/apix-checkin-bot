@@ -1,5 +1,10 @@
 # 中转站每日自动签到 + 余额巡检（GitHub Actions）
 
+[![每日签到](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/qingshanjiluo/apix-checkin-bot/main/status/badge.json)](../../actions/workflows/daily-checkin.yml)
+[![Workflow](https://github.com/qingshanjiluo/apix-checkin-bot/actions/workflows/daily-checkin.yml/badge.svg)](../../actions/workflows/daily-checkin.yml)
+
+> 最新一次结果自动回写在 **[签到结果.md](签到结果.md)**（表格含每站签到结果、余额、每次区间、累计奖励）。
+
 给一堆 AI 中转站（API Relay）自动做两件事：**每日签到白嫖额度** + **余额巡检**。
 纯 HTTP 调用站点自己的接口，**不需要浏览器、不需要过验证码的站全自动**，跑在 GitHub Actions 上，每天两次（北京时间 08:10 / 20:10），互不干扰、可重复运行。
 

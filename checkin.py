@@ -159,13 +159,18 @@ class Client:
 
 
 # --------------------------------------------------------------------------- 通用探测
-def detect_flavor(c: Client) -> str:
-    st, b = c.call("GET", "/api/v1/settings/public", auth=False)
-    if st == 200 and isinstance(b, dict) and "site_name" in json.dumps(b)[:4000]:
-        return "apix"
-    st, b = c.call("GET", "/api/status", auth=False)
-    if st == 200 and isinstance(b, dict) and b.get("success"):
-        return "newapi"
+def detect_flavor(c: Client, tries: int = 3) -> str:
+    """探测面板类型；站点偶发 5xx/超时会让探测失败，所以带重试。"""
+    for attempt in range(1, tries + 1):
+        st, b = c.call("GET", "/api/v1/settings/public", auth=False)
+        if st == 200 and isinstance(b, dict) and "site_name" in json.dumps(b)[:4000]:
+            return "apix"
+        st, b = c.call("GET", "/api/status", auth=False)
+        if st == 200 and isinstance(b, dict) and b.get("success"):
+            return "newapi"
+        if attempt < tries:
+            log(f"  · 面板探测未成功（HTTP {st}），1.5s 后重试")
+            time.sleep(1.5)
     return "unknown"
 
 
@@ -385,12 +390,33 @@ def run_site(cfg: dict) -> dict:
         if flavor in ("auto", "", "unknown"):
             flavor = detect_flavor(c)
         out["flavor"] = flavor
+        if flavor == "unknown":
+            # 探测失败时直接两种登录都试一遍（站点偶发 5xx / 接口被挡时不至于整体报错）
+            log("  · 面板探测失败，改为一一尝试 newapi / apix 登录")
+            last = None
+            for guess in ("newapi", "apix"):
+                try:
+                    c2 = Client(cfg["base"])
+                    res = (newapi_run if guess == "newapi" else apix_run)(c2, cfg)
+                    if res.get("checkin", "-") != "-" or res.get("ok"):
+                        out.update(res)
+                        out["flavor"] = guess
+                        out["ok"] = True
+                        break
+                except Exception as e:  # noqa: BLE001
+                    last = e
+                    continue
+            else:
+                out["checkin"] = f"两种面板都登录失败：{last}"
+                out["error"] = str(last) if last else "面板无法识别"
+            out["secs"] = round(time.time() - t0, 1)
+            return out
         if flavor == "apix":
             out.update(apix_run(c, cfg))
         elif flavor == "newapi":
             out.update(newapi_run(c, cfg))
         else:
-            out["checkin"] = "无法识别面板类型（既不是 Apix 也不是 New API）"
+            out["checkin"] = f"未知面板类型 {flavor}（可把 flavor 改成 auto/apix/newapi）"
             return out
         out["ok"] = True
     except Exception as e:  # noqa: BLE001
@@ -504,6 +530,70 @@ def write_summary(rows: list[dict]) -> None:
         pass
 
 
+def write_result_files(rows: list[dict]) -> None:
+    """把结果回写成仓库里的文件：人看的 md、机器读的 json、shields.io 徽标 json。"""
+    ok = sum(1 for r in rows if r["ok"] and not r.get("manual"))
+    man = sum(1 for r in rows if r.get("manual"))
+    bad = sum(1 for r in rows if not r["ok"])
+    tot = total_usd(rows)
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+    state = "failure" if bad else ("partial" if man else "success")
+    summary = f"{ok}/{len(rows)} 自动成功" + (f"，{man} 需手动" if man else "") \
+              + (f"，{bad} 失败" if bad else "") + (f"，合计余额 ${tot}" if tot is not None else "")
+
+    path = os.environ.get("RESULT_MD", "").strip()
+    if path:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        show_acct = os.environ.get("PUBLISH_ACCOUNT", "").strip() in ("1", "true", "yes")
+        head = "| 站点 | 面板 | 签到结果 | 余额 | 每次区间 | 累计 |" + (" 账号 |" if show_acct else "")
+        sep = "|---|---|---|---|---|---|" + ("---|" if show_acct else "")
+        md = ["# 每日签到结果（自动更新，勿手改）", "",
+              f"**状态：{ {'success':'✅ 全部成功','partial':'⚠️ 部分需手动','failure':'❌ 有失败'}[state] }**"
+              f" ｜ {summary} ｜ 更新时间：{stamp}", "",
+              "> 本文件由 Actions 自动回写。账号名默认不公开（要显示就在 workflow 的 env 里加 `PUBLISH_ACCOUNT: \"1\"`）；",
+              "> 完整日志与历史见 Actions 工作流的 Summary。", "",
+              head, sep]
+        for r in sorted(rows, key=lambda x: -(x["usd"] if isinstance(x.get("usd"), (int, float)) else -1)):
+            icon = "⚠️" if r.get("manual") else ("✅" if r["ok"] else "❌")
+            ex = r.get("extra") or {}
+            line = (f"| {icon} **{r['name']}**<br><sub>{r['base'].split('://')[-1]}</sub> | {r.get('flavor', '-')} "
+                    f"| {r['checkin']} | {r.get('balance', '-')} "
+                    f"| {r.get('range') or '-'} | {ex.get('累计奖励', '-')} |")
+            if show_acct:
+                line = line[:-1] + f" {r.get('user', '-')} |"
+            md.append(line)
+        md += ["", f"> 由 GitHub Actions 自动写入。历史运行见 "
+                   f"[Actions 页面](../../actions/workflows/daily-checkin.yml) 的 Summary。"]
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(md) + "\n")
+        log(f"结果文件已写入 {path}")
+
+    payload = {"state": state, "time": stamp, "total_sites": len(rows), "auto_ok": ok,
+               "manual": man, "failed": bad, "total_usd": tot, "usd_rate": USD_RATE,
+               "summary": summary,
+               "sites": [{"name": r.get("name"), "base": r.get("base"), "flavor": r.get("flavor"),
+                          "user": r.get("user"), "checkin": r.get("checkin"), "balance": r.get("balance"),
+                          "usd": r.get("usd"), "range": r.get("range"), "ok": bool(r.get("ok")),
+                          "manual": bool(r.get("manual")), "error": r.get("error")} for r in rows]}
+    jpath = os.environ.get("RESULT_JSON", "").strip()
+    if jpath:
+        os.makedirs(os.path.dirname(jpath) or ".", exist_ok=True)
+        with open(jpath, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=1)
+        log(f"结果 JSON 已写入 {jpath}")
+
+    bpath = os.environ.get("BADGE_JSON", "").strip()
+    if bpath:
+        os.makedirs(os.path.dirname(bpath) or ".", exist_ok=True)
+        color = {"success": "brightgreen", "partial": "yellowgreen", "failure": "red"}[state]
+        msg = (f"{ok}/{len(rows)}" + (f" ⚠{man}" if man else "") + (f" ❌{bad}" if bad else "")
+               + (f" · ${tot}" if tot is not None else ""))
+        badge = {"schemaVersion": 1, "label": "每日签到", "message": msg, "color": color}
+        with open(bpath, "w", encoding="utf-8") as fh:
+            json.dump(badge, fh, ensure_ascii=False)
+        log(f"徽标已写入 {bpath}")
+
+
 def send_notify(text: str) -> None:
     keys = []
     if os.environ.get("PUSHPLUS_TOKEN"):
@@ -581,6 +671,7 @@ def main() -> int:
     report = build_report(rows)
     print("\n" + "=" * 72 + "\n" + report + "\n" + "=" * 72)
     write_summary(rows)
+    write_result_files(rows)
 
     policy = os.environ.get("CHECKIN_NOTIFY_ON", "on_failure")
     failed = [r for r in rows if not r["ok"]]

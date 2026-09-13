@@ -1,6 +1,6 @@
 name: 中转站每日签到 + 余额巡检
 
-# 北京时间 08:10 与 20:10 各跑一次（同一天两次机会；脚本幂等，重复运行只会提示"今日已签到"）
+# 北京时间 08:10 与 20:10 各跑一次（幂等，重复运行只会提示"今日已签到"）
 on:
   schedule:
     - cron: "10 0,12 * * *"
@@ -24,9 +24,14 @@ on:
           - on_failure
           - always
           - on_success
+      publish:
+        description: "是否把结果回写到仓库（更新 签到结果.md 与状态徽标）"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: relay-daily-checkin
@@ -34,12 +39,14 @@ concurrency:
 
 jobs:
   checkin:
-    name: 登录 · 签到 · 查余额
+    name: 登录 · 签到 · 查余额 · 回写结果
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: 准备 Python
         uses: actions/setup-python@v5
@@ -55,6 +62,9 @@ jobs:
           CHECKIN_TIMEOUT: "30"
           CHECKIN_LOW_USD: ""          # 填数字（如 2）则余额低于 $2 的站标红
           CHECKIN_USD_RATE: "7.2"      # 折算人民币展示用汇率
+          RESULT_MD: 签到结果.md
+          RESULT_JSON: status/last-run.json
+          BADGE_JSON: status/badge.json
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -65,7 +75,34 @@ jobs:
             echo "::error::未设置 Secret SITES_JSON（内容见 README：站点数组 JSON）"
             exit 2
           fi
+          set +e
           python checkin.py --site "${{ github.event.inputs.only_site }}"
+          echo "CHECKIN_EXIT=$?" >> "$GITHUB_ENV"
+          set -e
+
+      - name: 回写结果与徽标到仓库
+        if: always() && github.event.inputs.publish != 'false'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f 签到结果.md status/last-run.json status/badge.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "结果无变化，跳过提交"
+          else
+            git commit -m "chore(status): $(date -u '+%Y-%m-%d %H:%M') UTC [skip ci]"
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
+
+      - name: 按巡检结果决定本次运行状态
+        if: always()
+        run: |
+          code=${CHECKIN_EXIT:-1}
+          if [ "$code" != "0" ]; then
+            echo "::error::有站点签到失败（退出码 $code），详见上方表格"
+            exit "$code"
+          fi
+          echo "✅ 全部站点处理完成"
 
       - name: 排查提示
         if: failure()
