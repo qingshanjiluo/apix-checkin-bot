@@ -1,0 +1,17 @@
+# 本地凭据（不要提交）
+.env
+*.local.ps1
+secrets.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

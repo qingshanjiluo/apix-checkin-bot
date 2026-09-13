@@ -1,0 +1,31 @@
+name: 保活 · 防止定时任务被停用
+
+# GitHub 会在仓库连续 60 天没有任何提交时自动停用 Schedule 触发。
+# 这个工作流每半个月往仓库推一个空提交，保证签到任务长期有效。
+on:
+  schedule:
+    - cron: "30 1 1,15 * *" # UTC 01:30 = 北京时间 09:30，每月 1 / 15 日
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+jobs:
+  touch:
+    name: 推送空提交
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Empty commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore(keepalive): $(date -u '+%Y-%m-%d %H:%M') UTC"
+          git push origin "HEAD:${{ github.ref_name }}"

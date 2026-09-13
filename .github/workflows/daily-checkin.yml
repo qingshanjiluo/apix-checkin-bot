@@ -1,0 +1,59 @@
+name: Apix 每日自动签到
+
+# 北京时间 08:10 与 20:10 各运行一次（同一天两次机会，幂等，重复运行只会提示"已签到"）
+on:
+  schedule:
+    - cron: "10 0,12 * * *"
+  workflow_dispatch:
+    inputs:
+      notify_on:
+        description: "通知策略（always / on_failure / on_success）"
+        required: false
+        default: "on_failure"
+        type: choice
+        options:
+          - on_failure
+          - always
+          - on_success
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apix-daily-checkin
+  cancel-in-progress: false
+
+jobs:
+  checkin:
+    name: 登录并签到
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 执行每日签到
+        env:
+          APIX_BASE_URL: https://apix.chat
+          APIX_EMAIL: ${{ secrets.APIX_EMAIL }}
+          APIX_PASSWORD: ${{ secrets.APIX_PASSWORD }}
+          APIX_REFRESH_TOKEN: ${{ secrets.APIX_REFRESH_TOKEN }}
+          APIX_ATTEMPTS: "4"
+          APIX_NOTIFY_ON: ${{ github.event.inputs.notify_on || 'on_failure' }}
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+        run: python apix_checkin.py
+
+      - name: 失败时打印排查提示
+        if: failure()
+        run: |
+          echo "::notice title=排查::请确认 Secrets 中 APIX_EMAIL / APIX_PASSWORD 正确，" \
+               "以及 apix.chat 是否新增验证码（若新增，需在脚本中补上验证码字段）。"
