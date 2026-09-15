@@ -1,12 +1,13 @@
 # 中转站每日自动签到 + 余额巡检（GitHub Actions）
 
-[![每日签到](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/qingshanjiluo/apix-checkin-bot/main/status/badge.json)](../../actions/workflows/daily-checkin.yml)
+[![每日签到](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/qingshanjiluo/apix-checkin-bot/status/state/badge.json)](../../actions/workflows/daily-checkin.yml)
 [![Workflow](https://github.com/qingshanjiluo/apix-checkin-bot/actions/workflows/daily-checkin.yml/badge.svg)](../../actions/workflows/daily-checkin.yml)
 
-> 最新一次结果自动回写在 **[签到结果.md](签到结果.md)**（表格含每站签到结果、余额、每次区间、累计奖励）。
+> 每次运行结果自动写到独立的 **[`status` 分支 → `state/latest.md`](../../blob/status/state/latest.md)**（成功数 / 本次到账 / 合计余额 / 每站明细 / 每日进账台账）。
+> 生成物不挤进代码分支，所以永远不会和你的提交冲突。
 
 给一堆 AI 中转站（API Relay）自动做两件事：**每日签到白嫖额度** + **余额巡检**。
-纯 HTTP 调用站点自己的接口，**不需要浏览器、不需要过验证码的站全自动**，跑在 GitHub Actions 上，每天两次（北京时间 08:10 / 20:10），互不干扰、可重复运行。
+纯 HTTP 调用站点自己的接口，**不需要浏览器、不需要过验证码的站全自动**，跑在 GitHub Actions 上，每天四个槽位（北京时间 08:10 / 14:10 / 20:10 / 02:10），互不干扰、可重复运行。
 
 - 已适配 **Apix 面板**（`apix.chat` 及同类站）：`/api/v1/auth/login` → `/api/v1/user/checkin`
 - 已适配 **New API 面板**（绝大多数公益中转站）：`/api/user/login` → `/api/user/self` → `/api/user/checkin`
@@ -95,14 +96,34 @@ Summary 表按余额从高到低排序，并给出**合计余额**。
 4. 同一天重复运行安全：已签到会返回 `今日已签到` / `409`，脚本识别为成功。
 5. 仓库 60 天无活动 GitHub 会停用 schedule，`keep-alive.yml` 每半月自动空提交保活。
 6. 新注册 GitHub 账号需**验证邮箱**才会执行定时任务。
+7. **有的站签到要先"真实使用"**：例如 `api.juziai.cc` 返回
+   `eligibility.eligible=false`、`今日调用次数不足 5 次(当前 0 次)`，规则字段是 `rules.min_daily_usage_count`。
+   脚本会如实标成 ⚠️ 并写出原因（不报错）。这类门槛请**自己真用几次**（拿它生图/问答）再签，
+   自动刷调用次数属于绕过站方防刷规则，本项目不做。
+8. GitHub 高峰期会把 `schedule` 推迟几个小时甚至跨天，所以 cron 留了 4 个槽位对冲；
+   想立刻补签就在 Actions 里手动 Run workflow。
+
+## 产出文件（写到独立的 `status` 分支，每次运行重建该分支）
+
+| 文件 | 内容 |
+|---|---|
+| `state/latest.md` | 人看的最新结果：成功数、本次到账、合计余额、每站明细（按余额排序）、每日进账台账 |
+| `state/badge.json` | shields.io 徽标数据，README 顶部那枚就是它（全成功绿 / 有需手动黄绿 / 有失败红） |
+| `state/last-run.json` | 机器可读：`state / gained_usd / total_usd / sites[] / daily_ledger[]` |
+| `state/ledger.csv` | 每日进账台账（追加式，跨运行累积）：`date_beijing,time_utc,site,base,gained_usd,balance_usd` |
+
+在线直链：<https://github.com/qingshanjiluo/apix-checkin-bot/blob/status/state/latest.md>
+台账末尾会自动生成「每日进账」小表（最近 14 个北京日 + 累计），`latest.md` 里也带。
+账号名默认不写进公开文件，需要就在 workflow 的 `env:` 加 `PUBLISH_ACCOUNT: "1"`。
+代码分支（`main`）只放代码，`.gitignore` 已忽略 `state/`，所以机器人提交不会和你的手改打架。
 
 ## 文件
 
 | 文件 | 说明 |
 |---|---|
-| `checkin.py` | 主脚本：多站点、双面板、签到 + 余额 + 通知 + Summary |
+| `checkin.py` | 主脚本：多站点、双面板、签到 + 余额 + 台账 + 通知 + Summary + 回写仓库 |
 | `sites.example.json` | 配置模板（不含真实凭据） |
 | `run-local.ps1` | 本地交互式跑一次 |
-| `.github/workflows/daily-checkin.yml` | 每日定时（08:10 / 20:10 北京时间） |
+| `.github/workflows/daily-checkin.yml` | 每日定时（北京时间 08:10 / 14:10 / 20:10 / 02:10） |
 | `.github/workflows/keep-alive.yml` | 保活空提交，防止 schedule 被停用 |
 | `apix_checkin.py` | 旧版单站脚本，保留备查，已由 `checkin.py` 取代 |

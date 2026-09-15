@@ -38,6 +38,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import http.cookiejar
 import json
 import os
@@ -251,6 +252,10 @@ def apix_run(c: Client, cfg: dict) -> dict:
     else:
         r2 = first(got, "reward_amount", "quota_awarded", "amount", default=reward)
         res["checkin"] = f"签到成功 +{usd(r2)}" if r2 else "签到成功"
+        try:
+            res["gained"] = round(float(r2), 6) if r2 else 0.0     # Apix 面板金额即美元
+        except (TypeError, ValueError):
+            res["gained"] = 0.0
     st, prof2 = c.call("GET", "/api/v1/user/profile")
     if isinstance(prof2, dict) and prof2.get("data"):
         res["balance"] = bal(prof2["data"])
@@ -369,6 +374,10 @@ def newapi_run(c: Client, cfg: dict) -> dict:
     else:
         awarded = first(got, "quota_awarded", "quota", "amount")
         res["checkin"] = f"签到成功 +{money(awarded, per_unit)}" if awarded else "签到成功"
+        try:
+            res["gained"] = round(float(awarded) / (per_unit or 500000), 6) if awarded else 0.0
+        except (TypeError, ValueError):
+            res["gained"] = 0.0
     st, me2 = c.call("GET", "/api/user/self")
     d2 = (me2.get("data") or {}) if isinstance(me2, dict) else {}
     if d2:
@@ -464,6 +473,47 @@ def total_usd(rows):
     return round(sum(vals), 4) if vals else None
 
 
+def gained_usd(rows):
+    vals = [r["gained"] for r in rows if isinstance(r.get("gained"), (int, float))]
+    return round(sum(vals), 4) if vals else 0.0
+
+
+def beijing_stamp(offset_sec: int = 0) -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time() + 8 * 3600 + offset_sec))
+
+
+def write_ledger(rows: list[dict]) -> list[dict]:
+    """把本次进账追加进 status/ledger.csv，并返回最近若干天的日汇总。"""
+    path = os.environ.get("LEDGER_CSV", "").strip()
+    if not path or DRY_RUN:
+        return []
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    day = beijing_stamp()[:10]
+    exists = os.path.exists(path)
+    with open(path, "a", encoding="utf-8", newline="") as fh:
+        if not exists:
+            fh.write("date_beijing,time_utc,site,base,gained_usd,balance_usd\n")
+        for r in rows:
+            if not isinstance(r.get("gained"), (int, float)) or r["gained"] <= 0:
+                continue
+            bal = r.get("usd") if isinstance(r.get("usd"), (int, float)) else ""
+            fh.write(f"{day},{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())},"
+                     f"{r['name']},{r['base']},{r['gained']},{bal}\n")
+    # 读回并汇总最近 14 个北京日
+    days = {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                d = row.get("date_beijing")
+                try:
+                    days[d] = round(days.get(d, 0.0) + float(row.get("gained_usd") or 0), 4)
+                except (TypeError, ValueError):
+                    continue
+    except OSError:
+        return []
+    return [{"date": k, "gained_usd": v} for k, v in sorted(days.items())][-14:]
+
+
 def low_flag(r):
     thr = LOW_USD
     if not thr or not isinstance(r.get("usd"), (int, float)) or r.get("manual"):
@@ -475,8 +525,10 @@ def build_report(rows: list[dict]) -> str:
     ok = sum(1 for r in rows if r["ok"])
     man = sum(1 for r in rows if r.get("manual"))
     tot = total_usd(rows)
-    lines = [f"【中转站签到】{time.strftime('%Y-%m-%d %H:%M')} UTC",
+    gain = gained_usd(rows)
+    lines = [f"【中转站签到】{time.strftime('%Y-%m-%d %H:%M')} 北京",
              f"成功 {ok}/{len(rows)}" + (f"，其中 {man} 家需手动" if man else "")
+             + (f"｜本次到账 ${gain}" if gain else "")
              + (f"｜合计余额 ${tot}" if tot is not None else "")
              + ("（试运行）" if DRY_RUN else ""), ""]
     for r in sorted(rows, key=lambda x: -(x["usd"] if isinstance(x.get("usd"), (int, float)) else -1)):
@@ -496,6 +548,7 @@ def build_report(rows: list[dict]) -> str:
         if r.get("error"):
             body += f"\n   错误：{r['error']}"
         lines.append(body)
+    lines += [""] + ledger_lines()
     return "\n".join(lines)
 
 
@@ -507,8 +560,10 @@ def write_summary(rows: list[dict]) -> None:
     man = sum(1 for r in rows if r.get("manual"))
     bad = sum(1 for r in rows if not r["ok"])
     tot = total_usd(rows)
+    gain = gained_usd(rows)
     md = ["## 🎯 中转站每日签到 + 余额看板", "",
-          f"**{time.strftime('%Y-%m-%d %H:%M')} UTC** ｜ 自动成功 **{ok}** ｜ 需手动 {man} ｜ 失败 {bad}"
+          f"**{beijing_stamp()} 北京** ｜ 自动成功 **{ok}** ｜ 需手动 {man} ｜ 失败 {bad}"
+          + (f" ｜ 本次到账 **${gain}**" if gain else "")
           + (f" ｜ 合计余额 **${tot}**（≈¥{tot * USD_RATE:.2f}）" if tot is not None else ""), "",
           "| 站点 | 面板 | 签到结果 | 余额 | 备注 |", "|---|---|---|---|---|"]
     for r in sorted(rows, key=lambda x: -(x["usd"] if isinstance(x.get("usd"), (int, float)) else -1)):
@@ -522,6 +577,7 @@ def write_summary(rows: list[dict]) -> None:
                   f"| {r.get('flavor', '-')} | {r['checkin']} | {bal} | {ex} |")
     if LOW_USD:
         md += ["", f"<sub>🔴 = 余额低于设定阈值 ${LOW_USD}（Secret/环境变量 `CHECKIN_LOW_USD`）</sub>"]
+    md += ledger_lines("table")
     md += ["", f"<sub>试运行：{DRY_RUN}｜生成时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC</sub>"]
     try:
         with open(path, "a", encoding="utf-8") as fh:
@@ -536,10 +592,12 @@ def write_result_files(rows: list[dict]) -> None:
     man = sum(1 for r in rows if r.get("manual"))
     bad = sum(1 for r in rows if not r["ok"])
     tot = total_usd(rows)
+    gain = gained_usd(rows)
     stamp = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     state = "failure" if bad else ("partial" if man else "success")
     summary = f"{ok}/{len(rows)} 自动成功" + (f"，{man} 需手动" if man else "") \
-              + (f"，{bad} 失败" if bad else "") + (f"，合计余额 ${tot}" if tot is not None else "")
+              + (f"，{bad} 失败" if bad else "") + (f"，本次到账 ${gain}" if gain else "") \
+              + (f"，合计余额 ${tot}" if tot is not None else "")
 
     path = os.environ.get("RESULT_MD", "").strip()
     if path:
@@ -562,19 +620,26 @@ def write_result_files(rows: list[dict]) -> None:
             if show_acct:
                 line = line[:-1] + f" {r.get('user', '-')} |"
             md.append(line)
-        md += ["", f"> 由 GitHub Actions 自动写入。历史运行见 "
-                   f"[Actions 页面](../../actions/workflows/daily-checkin.yml) 的 Summary。"]
+        repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+        hist = (f"https://github.com/{repo}/actions/workflows/daily-checkin.yml" if repo
+                else "../../actions/workflows/daily-checkin.yml")
+        md += ledger_lines("table")
+        md += ["", f"> 由 GitHub Actions 自动写入，只存在于 `status` 分支（不与代码提交抢同一分支）。"
+                   f" 历史运行见 [Actions 页面]({hist}) 的 Summary。"]
         with open(path, "w", encoding="utf-8") as fh:
             fh.write("\n".join(md) + "\n")
         log(f"结果文件已写入 {path}")
 
-    payload = {"state": state, "time": stamp, "total_sites": len(rows), "auto_ok": ok,
+    payload = {"state": state, "time": stamp, "time_beijing": beijing_stamp(),
+               "total_sites": len(rows), "auto_ok": ok, "gained_usd": gain,
                "manual": man, "failed": bad, "total_usd": tot, "usd_rate": USD_RATE,
+               "daily_ledger": LEDGER,
                "summary": summary,
                "sites": [{"name": r.get("name"), "base": r.get("base"), "flavor": r.get("flavor"),
                           "user": r.get("user"), "checkin": r.get("checkin"), "balance": r.get("balance"),
-                          "usd": r.get("usd"), "range": r.get("range"), "ok": bool(r.get("ok")),
-                          "manual": bool(r.get("manual")), "error": r.get("error")} for r in rows]}
+                          "usd": r.get("usd"), "gained": r.get("gained"), "range": r.get("range"),
+                          "ok": bool(r.get("ok")), "manual": bool(r.get("manual")),
+                          "error": r.get("error")} for r in rows]}
     jpath = os.environ.get("RESULT_JSON", "").strip()
     if jpath:
         os.makedirs(os.path.dirname(jpath) or ".", exist_ok=True)
@@ -586,8 +651,11 @@ def write_result_files(rows: list[dict]) -> None:
     if bpath:
         os.makedirs(os.path.dirname(bpath) or ".", exist_ok=True)
         color = {"success": "brightgreen", "partial": "yellowgreen", "failure": "red"}[state]
+        today = beijing_stamp()[:10]
+        today_gain = next((x["gained_usd"] for x in LEDGER if x["date"] == today), 0)
         msg = (f"{ok}/{len(rows)}" + (f" ⚠{man}" if man else "") + (f" ❌{bad}" if bad else "")
-               + (f" · ${tot}" if tot is not None else ""))
+               + (f" 今日+${today_gain}" if today_gain else "")
+               + (f" · 余额 ${tot}" if tot is not None else ""))
         badge = {"schemaVersion": 1, "label": "每日签到", "message": msg, "color": color}
         with open(bpath, "w", encoding="utf-8") as fh:
             json.dump(badge, fh, ensure_ascii=False)
@@ -636,6 +704,22 @@ def send_notify(text: str) -> None:
 
 
 REPORT_ROWS: list[dict] = []
+LEDGER: list[dict] = []          # 由 main() 填充：最近若干天的日进账
+
+
+def ledger_lines(prefix: str = "") -> list[str]:
+    """把台账变成 markdown 行（前缀非空时用于 md 表格）。"""
+    if not LEDGER:
+        return []
+    total = round(sum(x["gained_usd"] for x in LEDGER), 4)
+    if prefix == "table":
+        out = ["", "### 📈 每日进账台账（北京时间，自动累计）", "",
+               "| 日期 | 签到进账 |", "|---|---|"]
+        out += [f"| {x['date']} | ${x['gained_usd']} |" for x in LEDGER]
+        out += ["", f"合计 **${total}**（自开始记录起）"]
+        return out
+    tail = "，".join(f"{x['date'][-5:]} ${x['gained_usd']}" for x in LEDGER[-7:])
+    return [f"📈 近 7 日到账：{tail}｜累计 ${total}"]
 
 
 def main() -> int:
@@ -666,8 +750,12 @@ def main() -> int:
         if i < len(sites):
             time.sleep(random.uniform(1.5, 4.0))
 
-    global REPORT_ROWS
+    global REPORT_ROWS, LEDGER
     REPORT_ROWS = rows
+    LEDGER = write_ledger(rows)          # 先累计台账，后面报表里能看到每日进账
+    gain = gained_usd(rows)
+    if gain:
+        log(f"💰 本次实际到账 ${gain}")
     report = build_report(rows)
     print("\n" + "=" * 72 + "\n" + report + "\n" + "=" * 72)
     write_summary(rows)

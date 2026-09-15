@@ -54,6 +54,21 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: 载入历史台账（status 分支）
+        run: |
+          mkdir -p state
+          if git ls-remote --exit-code --heads origin status >/dev/null 2>&1; then
+            git fetch -q --depth 1 origin status
+            for f in ledger.csv last-run.json badge.json; do
+              if git cat-file -e "FETCH_HEAD:state/$f" 2>/dev/null; then
+                git show "FETCH_HEAD:state/$f" > "state/$f"
+              fi
+            done
+            echo "已载入 status 分支的历史数据：$(wc -l < state/ledger.csv 2>/dev/null || echo 0) 行台账"
+          else
+            echo "status 分支还不存在，本次为首轮"
+          fi
+
       - name: 执行签到巡检
         env:
           SITES_JSON: ${{ secrets.SITES_JSON }}
@@ -63,9 +78,10 @@ jobs:
           CHECKIN_TIMEOUT: "30"
           CHECKIN_LOW_USD: ""          # 填数字（如 2）则余额低于 $2 的站标红
           CHECKIN_USD_RATE: "7.2"      # 折算人民币展示用汇率
-          RESULT_MD: 签到结果.md
-          RESULT_JSON: status/last-run.json
-          BADGE_JSON: status/badge.json
+          RESULT_MD: state/latest.md
+          RESULT_JSON: state/last-run.json
+          BADGE_JSON: state/badge.json
+          LEDGER_CSV: state/ledger.csv      # 每日进账台账（只追加）
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -81,19 +97,27 @@ jobs:
           echo "CHECKIN_EXIT=$?" >> "$GITHUB_ENV"
           set -e
 
-      - name: 回写结果与徽标到仓库
+      - name: 回写状态分支（不与代码分支抢提交）
         if: always() && github.event.inputs.publish != 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+          if [ ! -d state ] || [ -z "$(ls -A state 2>/dev/null)" ]; then
+            echo "没有生成任何结果文件，跳过回写"
+            exit 0
+          fi
+          TMP=$(mktemp -d)
+          cp -a state/. "$TMP/"
+          printf '# 自动签到状态数据\n\n本分支由 GitHub Actions 每次运行后重建（不进主分支，避免和代码提交冲突）。\n\n- `state/latest.md` 最新一次结果（成功数 / 本次到账 / 合计余额 / 每站明细）\n- `state/ledger.csv` 每日进账台账（追加式）\n- `state/last-run.json` 机器可读结果\n- `state/badge.json` README 顶部那枚徽标的数据源\n' > "$TMP/README.md"
+          cd "$TMP"
+          git init -q -b status .
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f 签到结果.md status/last-run.json status/badge.json 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "结果无变化，跳过提交"
-          else
-            git commit -m "chore(status): $(date -u '+%Y-%m-%d %H:%M') UTC [skip ci]"
-            git pull --rebase origin "${{ github.ref_name }}" || true
-            git push origin "HEAD:${{ github.ref_name }}"
-          fi
+          git add -A
+          git commit -q -m "status: $(date -u '+%Y-%m-%d %H:%M') UTC"
+          git push -f -q "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}" HEAD:status
+          echo "已推送到 status 分支（$(date -u '+%Y-%m-%d %H:%M') UTC）"
 
       - name: 按巡检结果决定本次运行状态
         if: always()

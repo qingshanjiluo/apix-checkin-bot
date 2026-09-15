@@ -1,7 +1,10 @@
-# 本地凭据（不要提交）
+# 本地凭据（绝对不要提交）
 .env
 *.local.ps1
 secrets.json
+accounts.local.json
+sites.local.json
+*.local.json
 
 # Python
 __pycache__/
@@ -15,6 +18,12 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
-accounts.local.json
-sites.local.json
-*.local.json
+
+# 本地日志
+run.log
+out.log
+
+# 运行产物：由 Actions 写到独立的 status 分支，代码分支不跟踪
+state/
+status/
+签到结果.md
