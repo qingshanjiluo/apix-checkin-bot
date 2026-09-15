@@ -1,13 +1,13 @@
 {
  "state": "partial",
- "time": "2026-09-15 11:39:39 UTC",
+ "time": "2026-09-15 14:50:23 UTC",
  "total_sites": 13,
  "auto_ok": 11,
  "manual": 2,
  "failed": 0,
- "total_usd": 57.8329,
+ "total_usd": 57.8904,
  "usd_rate": 7.2,
- "summary": "11/13 自动成功，2 需手动，合计余额 $57.8329",
+ "summary": "11/13 自动成功，2 需手动，合计余额 $57.8904",
  "sites": [
   {
    "name": "芯算AI",
@@ -40,9 +40,9 @@
    "base": "https://open.xiaojingai.com",
    "flavor": "newapi",
    "user": "sifangzhiji",
-   "checkin": "签到成功 +$0.0576 (≈¥0.415)",
+   "checkin": "今日已签到，跳过",
    "balance": "$0.2668 (≈¥1.921)",
-   "usd": 0.209168,
+   "usd": 0.266754,
    "range": "每次 $0.0200 (≈¥0.144)~$0.2000 (≈¥1.440)",
    "ok": true,
    "manual": false,
