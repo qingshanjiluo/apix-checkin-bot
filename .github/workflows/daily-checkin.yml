@@ -60,11 +60,11 @@ jobs:
           if git ls-remote --exit-code --heads origin status >/dev/null 2>&1; then
             git fetch -q --depth 1 origin status
             for f in ledger.csv last-run.json badge.json; do
-              if git cat-file -e "FETCH_HEAD:state/$f" 2>/dev/null; then
-                git show "FETCH_HEAD:state/$f" > "state/$f"
+              if git cat-file -e "FETCH_HEAD:$f" 2>/dev/null; then
+                git show "FETCH_HEAD:$f" > "state/$f"
               fi
             done
-            echo "已载入 status 分支的历史数据：$(wc -l < state/ledger.csv 2>/dev/null || echo 0) 行台账"
+            echo "已载入 status 分支历史数据：$(wc -l < state/ledger.csv 2>/dev/null || echo 0) 行台账"
           else
             echo "status 分支还不存在，本次为首轮"
           fi
@@ -109,7 +109,7 @@ jobs:
           fi
           TMP=$(mktemp -d)
           cp -a state/. "$TMP/"
-          printf '# 自动签到状态数据\n\n本分支由 GitHub Actions 每次运行后重建（不进主分支，避免和代码提交冲突）。\n\n- `state/latest.md` 最新一次结果（成功数 / 本次到账 / 合计余额 / 每站明细）\n- `state/ledger.csv` 每日进账台账（追加式）\n- `state/last-run.json` 机器可读结果\n- `state/badge.json` README 顶部那枚徽标的数据源\n' > "$TMP/README.md"
+          printf '# 自动签到状态数据（自动生成，勿手改）\n\n本分支由 GitHub Actions 每次运行后重建，用来把结果和代码分支分开：\n\n- `latest.md` 最新一次结果：成功数 / 本次到账 / 合计余额 / 每站明细 / 每日进账台账\n- `ledger.csv` 每日进账台账（追加式，跨运行累积）\n- `last-run.json` 机器可读结果\n- `badge.json` README 顶部那枚徽标的数据源\n\n在线看：<https://github.com/%s/blob/status/latest.md>\n' "${GITHUB_REPOSITORY}" > "$TMP/README.md"
           cd "$TMP"
           git init -q -b status .
           git config user.name  "github-actions[bot]"

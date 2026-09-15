@@ -1,9 +1,9 @@
 # 中转站每日自动签到 + 余额巡检（GitHub Actions）
 
-[![每日签到](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/qingshanjiluo/apix-checkin-bot/status/state/badge.json)](../../actions/workflows/daily-checkin.yml)
+[![每日签到](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/qingshanjiluo/apix-checkin-bot/status/badge.json)](../../actions/workflows/daily-checkin.yml)
 [![Workflow](https://github.com/qingshanjiluo/apix-checkin-bot/actions/workflows/daily-checkin.yml/badge.svg)](../../actions/workflows/daily-checkin.yml)
 
-> 每次运行结果自动写到独立的 **[`status` 分支 → `state/latest.md`](../../blob/status/state/latest.md)**（成功数 / 本次到账 / 合计余额 / 每站明细 / 每日进账台账）。
+> 每次运行结果自动写到独立的 **[`status` 分支 → `latest.md`](../../blob/status/latest.md)**（成功数 / 本次到账 / 合计余额 / 每站明细 / 每日进账台账）。
 > 生成物不挤进代码分支，所以永远不会和你的提交冲突。
 
 给一堆 AI 中转站（API Relay）自动做两件事：**每日签到白嫖额度** + **余额巡检**。
@@ -107,12 +107,12 @@ Summary 表按余额从高到低排序，并给出**合计余额**。
 
 | 文件 | 内容 |
 |---|---|
-| `state/latest.md` | 人看的最新结果：成功数、本次到账、合计余额、每站明细（按余额排序）、每日进账台账 |
-| `state/badge.json` | shields.io 徽标数据，README 顶部那枚就是它（全成功绿 / 有需手动黄绿 / 有失败红） |
-| `state/last-run.json` | 机器可读：`state / gained_usd / total_usd / sites[] / daily_ledger[]` |
-| `state/ledger.csv` | 每日进账台账（追加式，跨运行累积）：`date_beijing,time_utc,site,base,gained_usd,balance_usd` |
+| `latest.md` | 人看的最新结果：成功数、本次到账、合计余额、每站明细（按余额排序）、每日进账台账 |
+| `badge.json` | shields.io 徽标数据，README 顶部那枚就是它（全成功绿 / 有需手动黄绿 / 有失败红） |
+| `last-run.json` | 机器可读：`state / gained_usd / total_usd / sites[] / daily_ledger[]` |
+| `ledger.csv` | 每日进账台账（追加式，跨运行累积）：`date_beijing,time_utc,site,base,gained_usd,balance_usd` |
 
-在线直链：<https://github.com/qingshanjiluo/apix-checkin-bot/blob/status/state/latest.md>
+在线直链：<https://github.com/qingshanjiluo/apix-checkin-bot/blob/status/latest.md>
 台账末尾会自动生成「每日进账」小表（最近 14 个北京日 + 累计），`latest.md` 里也带。
 账号名默认不写进公开文件，需要就在 workflow 的 `env:` 加 `PUBLISH_ACCOUNT: "1"`。
 代码分支（`main`）只放代码，`.gitignore` 已忽略 `state/`，所以机器人提交不会和你的手改打架。
