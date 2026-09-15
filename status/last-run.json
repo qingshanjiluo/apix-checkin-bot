@@ -1,6 +1,6 @@
 {
  "state": "partial",
- "time": "2026-09-15 04:49:12 UTC",
+ "time": "2026-09-15 11:39:39 UTC",
  "total_sites": 13,
  "auto_ok": 11,
  "manual": 2,
@@ -40,8 +40,8 @@
    "base": "https://open.xiaojingai.com",
    "flavor": "newapi",
    "user": "sifangzhiji",
-   "checkin": "今日已签到，跳过",
-   "balance": "$0.2092 (≈¥1.506)",
+   "checkin": "签到成功 +$0.0576 (≈¥0.415)",
+   "balance": "$0.2668 (≈¥1.921)",
    "usd": 0.209168,
    "range": "每次 $0.0200 (≈¥0.144)~$0.2000 (≈¥1.440)",
    "ok": true,
