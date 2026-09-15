@@ -1,13 +1,13 @@
 {
  "state": "partial",
- "time": "2026-09-14 22:46:03 UTC",
+ "time": "2026-09-15 04:49:12 UTC",
  "total_sites": 13,
  "auto_ok": 11,
  "manual": 2,
  "failed": 0,
- "total_usd": 57.7693,
+ "total_usd": 57.8329,
  "usd_rate": 7.2,
- "summary": "11/13 自动成功，2 需手动，合计余额 $57.7693",
+ "summary": "11/13 自动成功，2 需手动，合计余额 $57.8329",
  "sites": [
   {
    "name": "芯算AI",
@@ -105,9 +105,9 @@
    "base": "https://autorouter.io",
    "flavor": "newapi",
    "user": "sifangzhiji",
-   "checkin": "签到成功 +$0.0635 (≈¥0.457)",
+   "checkin": "今日已签到，跳过",
    "balance": "$0.3947 (≈¥2.842)",
-   "usd": 0.33117,
+   "usd": 0.394706,
    "range": "每次 $0.0500 (≈¥0.360)~$0.2000 (≈¥1.440)",
    "ok": true,
    "manual": false,
