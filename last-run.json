@@ -1,0 +1,255 @@
+{
+ "state": "failure",
+ "time": "2026-10-10 21:42:21 UTC",
+ "time_beijing": "2026-10-11 05:42:21",
+ "total_sites": 13,
+ "auto_ok": 6,
+ "gained_usd": 3.2276,
+ "manual": 1,
+ "failed": 6,
+ "total_usd": 56.7554,
+ "usd_rate": 7.2,
+ "daily_ledger": [
+  {
+   "date": "2026-09-27",
+   "gained_usd": 2.8119
+  },
+  {
+   "date": "2026-09-28",
+   "gained_usd": 3.3078
+  },
+  {
+   "date": "2026-09-29",
+   "gained_usd": 3.5324
+  },
+  {
+   "date": "2026-09-30",
+   "gained_usd": 2.0517
+  },
+  {
+   "date": "2026-10-01",
+   "gained_usd": 2.5925
+  },
+  {
+   "date": "2026-10-02",
+   "gained_usd": 3.4014
+  },
+  {
+   "date": "2026-10-03",
+   "gained_usd": 2.7341
+  },
+  {
+   "date": "2026-10-04",
+   "gained_usd": 2.4229
+  },
+  {
+   "date": "2026-10-05",
+   "gained_usd": 2.2073
+  },
+  {
+   "date": "2026-10-06",
+   "gained_usd": 1.8744
+  },
+  {
+   "date": "2026-10-07",
+   "gained_usd": 3.2886
+  },
+  {
+   "date": "2026-10-08",
+   "gained_usd": 2.5504
+  },
+  {
+   "date": "2026-10-10",
+   "gained_usd": 1.8635
+  },
+  {
+   "date": "2026-10-11",
+   "gained_usd": 3.2276
+  }
+ ],
+ "summary": "6/13 自动成功，1 需手动，6 失败，本次到账 $3.2276，合计余额 $56.7554",
+ "sites": [
+  {
+   "name": "芯算AI",
+   "base": "https://xinsuanai.com",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "签到成功 +$2.6560 (≈¥19.123)",
+   "balance": "$57.2842 (≈¥412.446)",
+   "usd": 54.628222,
+   "gained": 2.655954,
+   "range": "每次 $1.0000 (≈¥7.200)~$3.0000 (≈¥21.600)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "UiUiAPI聚合平台",
+   "base": "https://api.uiuihao.com",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "需手动签到：站点开启人机验证（Turnstile），接口无法代签",
+   "balance": "—（登录需人机验证，拿不到余额）",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": true,
+   "error": null
+  },
+  {
+   "name": "小鲸AI开放平台",
+   "base": "https://open.xiaojingai.com",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "失败：RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}",
+   "balance": "-",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": false,
+   "manual": false,
+   "error": "RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}"
+  },
+  {
+   "name": "LinkAPI",
+   "base": "https://linkapi.ai",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "签到成功 +$0.0716 (≈¥0.516)",
+   "balance": "$2.2595 (≈¥16.269)",
+   "usd": 2.187872,
+   "gained": 0.071648,
+   "range": "每次 $0.0600 (≈¥0.432)~$0.1000 (≈¥0.720)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "AImodal",
+   "base": "https://aimodal.site",
+   "flavor": "已跳过",
+   "user": null,
+   "checkin": "按配置跳过（skip=true）",
+   "balance": "—",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "Apix",
+   "base": "https://apix.chat",
+   "flavor": "apix",
+   "user": "sifangzhiji@qq.com",
+   "checkin": "签到成功 +$0.5000 (≈¥3.600)",
+   "balance": "余额 $-0.0607 (≈¥-0.437)",
+   "usd": -0.060651,
+   "gained": 0.5,
+   "range": "每次 $0.5000 (≈¥3.600)（24h 内有效）",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "超级稳定API",
+   "base": "https://ai.gpt666claude.top",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "失败：RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}",
+   "balance": "-",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": false,
+   "manual": false,
+   "error": "RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}"
+  },
+  {
+   "name": "AutoRouter",
+   "base": "https://autorouter.io",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "失败：RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}",
+   "balance": "-",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": false,
+   "manual": false,
+   "error": "RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}"
+  },
+  {
+   "name": "卡皮巴拉API",
+   "base": "https://kapibala.asia",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "失败：RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}",
+   "balance": "-",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": false,
+   "manual": false,
+   "error": "RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}"
+  },
+  {
+   "name": "聚星AI",
+   "base": "https://juxingai.xyz",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "读签到状态失败：{\"message\": \"签到功能未启用\", \"success\": false}",
+   "balance": "$0.2651 (≈¥1.909)",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "大肘子API",
+   "base": "https://api.dzzi.ai",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "失败：RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}",
+   "balance": "-",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": false,
+   "manual": false,
+   "error": "RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}"
+  },
+  {
+   "name": "橘子API",
+   "base": "https://api.juziai.cc",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "失败：RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}",
+   "balance": "-",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": false,
+   "manual": false,
+   "error": "RuntimeError: 登录 连续 4 次失败：HTTP 409 {\"code\": \"AUTH_SESSION_LIMIT\", \"message\": \"Conflict\", \"success\": false}"
+  },
+  {
+   "name": "SJ_API",
+   "base": "https://www.sjapi.top",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "读签到状态失败：{\"message\": \"签到功能未启用\", \"success\": false}",
+   "balance": "$1.4552 (≈¥10.477)",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": false,
+   "error": null
+  }
+ ]
+}
