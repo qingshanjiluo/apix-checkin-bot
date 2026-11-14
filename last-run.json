@@ -1,0 +1,255 @@
+{
+ "state": "partial",
+ "time": "2026-11-14 06:11:55 UTC",
+ "time_beijing": "2026-11-14 14:11:55",
+ "total_sites": 13,
+ "auto_ok": 10,
+ "gained_usd": 0.4493,
+ "manual": 3,
+ "failed": 0,
+ "total_usd": 127.6904,
+ "usd_rate": 7.2,
+ "daily_ledger": [
+  {
+   "date": "2026-10-23",
+   "gained_usd": 2.2765
+  },
+  {
+   "date": "2026-10-24",
+   "gained_usd": 4.0792
+  },
+  {
+   "date": "2026-10-25",
+   "gained_usd": 2.3935
+  },
+  {
+   "date": "2026-10-26",
+   "gained_usd": 2.8895
+  },
+  {
+   "date": "2026-10-27",
+   "gained_usd": 3.0281
+  },
+  {
+   "date": "2026-10-28",
+   "gained_usd": 1.6861
+  },
+  {
+   "date": "2026-10-29",
+   "gained_usd": 2.9212
+  },
+  {
+   "date": "2026-11-08",
+   "gained_usd": 3.1803
+  },
+  {
+   "date": "2026-11-09",
+   "gained_usd": 3.2185
+  },
+  {
+   "date": "2026-11-10",
+   "gained_usd": 2.3729
+  },
+  {
+   "date": "2026-11-11",
+   "gained_usd": 2.3307
+  },
+  {
+   "date": "2026-11-12",
+   "gained_usd": 2.8197
+  },
+  {
+   "date": "2026-11-13",
+   "gained_usd": 2.3374
+  },
+  {
+   "date": "2026-11-14",
+   "gained_usd": 3.6451
+  }
+ ],
+ "summary": "10/13 自动成功，3 需手动，本次到账 $0.4493，合计余额 $127.6904",
+ "sites": [
+  {
+   "name": "芯算AI",
+   "base": "https://xinsuanai.com",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "今日已签到，跳过",
+   "balance": "$106.0113 (≈¥763.282)",
+   "usd": 106.011334,
+   "gained": null,
+   "range": "每次 $1.0000 (≈¥7.200)~$3.0000 (≈¥21.600)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "UiUiAPI聚合平台",
+   "base": "https://api.uiuihao.com",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "需手动签到：站点开启人机验证（Turnstile），接口无法代签",
+   "balance": "—（登录需人机验证，拿不到余额）",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": true,
+   "error": null
+  },
+  {
+   "name": "小鲸AI开放平台",
+   "base": "https://open.xiaojingai.com",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "签到成功 +$0.0476 (≈¥0.343)",
+   "balance": "$2.3516 (≈¥16.932)",
+   "usd": 2.304016,
+   "gained": 0.047614,
+   "range": "每次 $0.0200 (≈¥0.144)~$0.0500 (≈¥0.360)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "LinkAPI",
+   "base": "https://linkapi.ai",
+   "flavor": "newapi",
+   "user": null,
+   "checkin": "需手动签到：站点开启人机验证（Turnstile），接口无法代签",
+   "balance": "—（登录需人机验证，拿不到余额）",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": true,
+   "error": null
+  },
+  {
+   "name": "AImodal",
+   "base": "https://aimodal.site",
+   "flavor": "已跳过",
+   "user": null,
+   "checkin": "按配置跳过（skip=true）",
+   "balance": "—",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "Apix",
+   "base": "https://apix.chat",
+   "flavor": "apix",
+   "user": "sifangzhiji@qq.com",
+   "checkin": "今日已签到，跳过",
+   "balance": "余额 $1.9687 (≈¥14.175)",
+   "usd": 1.96869,
+   "gained": null,
+   "range": "每次 $0.5000 (≈¥3.600)（24h 内有效）",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "超级稳定API",
+   "base": "https://ai.gpt666claude.top",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "签到成功 +$0.0033 (≈¥0.023)",
+   "balance": "$0.4657 (≈¥3.353)",
+   "usd": 0.462464,
+   "gained": 0.003258,
+   "range": "每次 $0.0000 (≈¥0.000)~$0.0200 (≈¥0.144)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "AutoRouter",
+   "base": "https://autorouter.io",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "签到成功 +$0.1136 (≈¥0.818)",
+   "balance": "$3.4537 (≈¥24.867)",
+   "usd": 3.340086,
+   "gained": 0.113606,
+   "range": "每次 $0.0500 (≈¥0.360)~$0.2000 (≈¥1.440)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "卡皮巴拉API",
+   "base": "https://kapibala.asia",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "签到成功 +$0.2848 (≈¥2.050)",
+   "balance": "$11.2360 (≈¥80.899)",
+   "usd": 10.951184,
+   "gained": 0.284782,
+   "range": "每次 $0.2000 (≈¥1.440)~$0.4000 (≈¥2.880)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "聚星AI",
+   "base": "https://juxingai.xyz",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "读签到状态失败：{\"message\": \"签到功能未启用\", \"success\": false}",
+   "balance": "$0.2651 (≈¥1.909)",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "大肘子API",
+   "base": "https://api.dzzi.ai",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "今日已签到，跳过",
+   "balance": "$2.1746 (≈¥15.657)",
+   "usd": 2.174602,
+   "gained": null,
+   "range": "每次 $0.0200 (≈¥0.144)~$0.1000 (≈¥0.720)",
+   "ok": true,
+   "manual": false,
+   "error": null
+  },
+  {
+   "name": "橘子API",
+   "base": "https://api.juziai.cc",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "暂不可签到（需先满足条件：今日调用次数不足 5 次(当前 0 次),暂不能签到）",
+   "balance": "$0.4780 (≈¥3.441)",
+   "usd": 0.477986,
+   "gained": null,
+   "range": "每次 $0.0500 (≈¥0.360)~$0.2000 (≈¥1.440)",
+   "ok": true,
+   "manual": true,
+   "error": null
+  },
+  {
+   "name": "SJ_API",
+   "base": "https://www.sjapi.top",
+   "flavor": "newapi",
+   "user": "sifangzhiji",
+   "checkin": "读签到状态失败：{\"message\": \"签到功能未启用\", \"success\": false}",
+   "balance": "$1.4552 (≈¥10.477)",
+   "usd": null,
+   "gained": null,
+   "range": null,
+   "ok": true,
+   "manual": false,
+   "error": null
+  }
+ ]
+}
